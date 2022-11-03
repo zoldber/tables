@@ -78,8 +78,9 @@ class DataTable {
         //sort in descending order by token values in index n
         void sort(const unsigned int n);
 
-        //didn't want to #include <tuple>, return uint[3] = {rows, cols, sizeof(token)} instead
-        unsigned int * size(void);
+        //didn't want to #include <tuple> for this alone, might find use later
+        const unsigned int * rowDim(void);
+        const unsigned int * colDim(void);
 
         //returns first row of parsed csv file, cast as std::string regardless of table dataType
         Row<std::string> * header(void);
@@ -164,17 +165,10 @@ DataTable<dataType>::~DataTable(void) {
 }
 
 template <typename dataType>
-unsigned int * DataTable<dataType>::size(void) {
+const unsigned int DataTable<dataType>::rowDim(void) { return numRows; }    //added to replace size() method which was redundant and weird
 
-    unsigned int * dim = new unsigned int[3];
-    
-    dim[0] = numRows;
-    dim[1] = numCols;
-    dim[2] = sizeof(dataType);
-
-    return dim;
-
-}
+template <typename dataTYpe>
+const unsigned int DataTable<dataType>::colDim(void) {return numCols}; }    //ditto
 
 template <typename dataType>
 Row<dataType> * DataTable<dataType>::at(const unsigned int n) {     //renamed to bear functional similarity to std::vector
