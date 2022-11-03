@@ -16,7 +16,9 @@ class Row {
 
         unsigned int size;
 
-        dataType * tokens;
+        dataType * tokens;  //TODO: consider storing row tokens in a BST of containers that are data agnostic
+                            //      i.e. dataType * would point to structs containing a sortable tag regardless
+                            //      of string data / int data / float data etc.
 
     public:
 
@@ -113,7 +115,9 @@ DataTable<dataType>::DataTable(const std::string fileName, const char delimChar)
     }
 
     //assumes minimal dimension of [1x1]
-    numCols = numRows = 1;
+    //updated to make init more explicit
+    numCols = 1;
+    numRows = 1;
 
     //determine column count based on first row
     delimeter = delimChar;
@@ -173,7 +177,7 @@ unsigned int * DataTable<dataType>::size(void) {
 }
 
 template <typename dataType>
-Row<dataType> * DataTable<dataType>::index(const unsigned int n) {
+Row<dataType> * DataTable<dataType>::at(const unsigned int n) {     //renamed to bear functional similarity to std::vector
 
     if (n < rows.size()) return rows.at(n);
 
@@ -235,7 +239,7 @@ void DataTable<dataType>::fptrReference(bool (*func)(dataType, dataType)) {
 }
 
 template <typename dataType>
-Row<std::string> * DataTable<dataType>::header(void) {
+Row<std::string> * DataTable<dataType>::header(void) { 
 
     return headerLabels;
 
@@ -331,7 +335,9 @@ bool Row<dataType>::validNumeric(const std::string token) {
 
     while (i < token.size() && (token[i] == ' ' || token[i] == '-' || token[i] == '+')) i++;
 
-    if (i == token.size()) return false;
+    if (i >= token.size()) return false;    //returns false if input string is comprised entirely 
+                                            //of leading chars {' ','+','-'} which should default
+                                            //to zero (false->zero) where function returns
 
     return isdigit(token[i]);
 
@@ -340,9 +346,9 @@ bool Row<dataType>::validNumeric(const std::string token) {
 template <typename dataType>
 void Row<dataType>::print(void) {
 
-    unsigned int i;
+    unsigned int i = 0;
 
-    for (i = 0; i < (size - 1); i++) std::cout << tokens[i] << ", ";
+    while (i < (size - 1)) std::cout << tokens[i++] << ", ";    //fixed potentially unsafe routine
 
     std::cout << tokens[i] << std::endl;
 
@@ -351,9 +357,9 @@ void Row<dataType>::print(void) {
 template <typename dataType>
 void Row<dataType>::print(const int n) {
 
-    unsigned int i, colRange = (n < 0) ? (size + n) : std::min((unsigned int)n, size);
+    unsigned int i = 0, colRange = (n < 0) ? (size + n) : std::min((unsigned int)n, size);
 
-    for (i = 0; i < (colRange - 1); i++) std::cout << tokens[i] << ", ";
+    while (i < (colRange - 1)) std::cout << tokens[i++] << ", ";    //fixed potentially unsafe routine
 
     std::cout << tokens[i] << std::endl;
 
