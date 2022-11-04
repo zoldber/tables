@@ -2,10 +2,10 @@
 #include <sstream>
 #include <string>
 
-//if first non-sign, non-space character of a cell is numeric, std::stof() will function dependably
+//The sto_() functions break if passed a string of length 0 or one starting with a non-numeric char
+//If first non-sign, non-space character of a cell is numeric, std::stof() will function dependably
 //note: sort character passes in while() loop by expected frequency (e.g. if more tokens are expected
 //      to start with a '-' than a '+' or a ' ', place it first to make use of short-circuiting)
-
 bool validNumeric(const std::string token) {
 
     unsigned int i = 0;
@@ -50,11 +50,12 @@ auto splitFlp(const std::string buff, const unsigned int cols, const char delime
 
     std::string token;
 
-    auto tokens = new double[cols];
+    auto tokens = new double[cols]();
 
     for (unsigned int i = 0; i < cols && std::getline(str, token, delimeter); i++) {
-        //stof() freaks out if passed a string of length 0 or one starting with a non-numeric char
+
         tokens[i] = validNumeric(token) ? std::stof(token) : 0.0;
+
     }
 
     return tokens;
@@ -68,11 +69,12 @@ dataType * splitInt(const std::string buff, const unsigned int cols, const char 
 
     std::string token;
 
-    auto tokens = new dataType[cols];
+    auto tokens = new dataType[cols]();
 
     for (unsigned int i = 0; i < cols && std::getline(str, token, delimeter); i++) {
-        //stof() freaks out if passed a string of length 0 or one starting with a non-numeric char
-        tokens[i] = validNumeric(token) ? (dataType)std::stoi(token) : 0.0;
+
+        tokens[i] = validNumeric(token) ? (dataType)std::stol(token) : 0x0;
+
     }
 
     return tokens;
