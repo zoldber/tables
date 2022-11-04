@@ -4,21 +4,22 @@
 #include <string>
 #include <vector>
 
+#include "token_split.hpp"
+
 template <class dataType> 
 class Row {
 
     private:
 
-        //if first non-sign, non-space character of a cell is numeric, std::stof() will function dependably
-        //note: sort character passes in while() loop by expected frequency (e.g. if more tokens are expected
-        //      to start with a '-' than a '+' or a ' ', place it first to make use of short-circuiting)
-        bool validNumeric(const std::string token);
+        //split fns are called thousands to millions of times per csv 
+        //document and should be optimized by type in token_split.hpp
+
+        //TODO: consider storing row tokens in a BST of containers that are data agnostic
+        //      i.e. dataType * would point to structs containing a sortable tag regardless
+        //      of string data / int data / float data etc.
+        dataType * tokens;
 
         unsigned int size;
-
-        dataType * tokens;  //TODO: consider storing row tokens in a BST of containers that are data agnostic
-                            //      i.e. dataType * would point to structs containing a sortable tag regardless
-                            //      of string data / int data / float data etc.
 
     public:
 
@@ -79,14 +80,14 @@ class DataTable {
         void sort(const unsigned int n);
 
         //didn't want to #include <tuple> for this alone, might find use later
-        const unsigned int * rowDim(void);
-        const unsigned int * colDim(void);
+        const unsigned int rowDim(void);
+        const unsigned int colDim(void);
 
         //returns first row of parsed csv file, cast as std::string regardless of table dataType
         Row<std::string> * header(void);
 
         //returns pointer to row at index n
-        Row<dataType> * index(const unsigned int n);
+        Row<dataType> * row(const unsigned int n);
 
         //does same thing as index but removes row after returning pointer
         Row<dataType> * pullRow(const unsigned int n);
@@ -167,11 +168,11 @@ DataTable<dataType>::~DataTable(void) {
 template <typename dataType>
 const unsigned int DataTable<dataType>::rowDim(void) { return numRows; }    //added to replace size() method which was redundant and weird
 
-template <typename dataTYpe>
-const unsigned int DataTable<dataType>::colDim(void) {return numCols}; }    //ditto
+template <typename dataType>
+const unsigned int DataTable<dataType>::colDim(void) { return numCols; }    //ditto
 
 template <typename dataType>
-Row<dataType> * DataTable<dataType>::at(const unsigned int n) {     //renamed to bear functional similarity to std::vector
+Row<dataType> * DataTable<dataType>::row(const unsigned int n) {     //renamed to row()
 
     if (n < rows.size()) return rows.at(n);
 
@@ -248,95 +249,37 @@ void DataTable<dataType>::sort(const unsigned int n) {
 }
 
 //Row Functions and Constructors:
-//note: Row() should support string, float, double, int16, int32
+//note: check for double and string casts first, then assume integer variant
 
 template < > 
-Row<float>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
-
-    unsigned int i = 0;
+Row<double>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
 
     size = colCount;
 
-    std::stringstream str(lineBuffer);
-
-    std::string token;
-
-    tokens = new float[colCount];
-
-    while (i < size && std::getline(str, token, delim)) {
-        //stof() freaks out if passed a string of length 0 or one starting with a non-numeric char
-        tokens[i++] = validNumeric(token) ? std::stof(token) : 0.0;
-    }
-
-    //row was short on tokens (usually just getline() function failing on deim-
-    //adjacent newline e.g. ",,," returns 3 tokens, ",,,a" correctly returns 4)
-    while (i < size) tokens[i++] = 0.0;
+    tokens = splitFlp(lineBuffer, colCount, delim);
 
 }
 
 template < >
 Row<std::string>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
 
-    unsigned int i = 0;
-
     size = colCount;
 
-    std::stringstream str(lineBuffer);
-
-    std::string token;
-
-    tokens = new std::string[colCount];
-
-    while (i < size && std::getline(str, token, delim)) tokens[i++] = token;
-
-    //row was short on tokens (usually just getline() function failing on deim-
-    //adjacent newline e.g. ",,," returns 3 tokens, ",,,a" correctly returns 4)
-    while (i < size) tokens[i++] = "";
-
-    return;
+    tokens = splitStr(lineBuffer, colCount, delim);
 
 }
 
-template < >
-Row<int32_t>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
-
-    unsigned int i = 0;
-
-    size = colCount;
-
-    std::stringstream str(lineBuffer);
-
-    std::string token;
-
-    tokens = new int32_t[colCount];
-
-    while (i < size && std::getline(str, token, delim)) {
-        //stof() freaks out if passed a string of length 0 or one starting with a non-numeric char
-        tokens[i++] = validNumeric(token) ? (int32_t)std::stoi(token) : 0.0;
-    }
-    //row was short on tokens (usually just getline() function failing on deim-
-    //adjacent newline e.g. ",,," returns 3 tokens, ",,,a" correctly returns 4)
-    while (i < size) tokens[i++] = 0.0;
-
-    return;
-
-}
-
+//handles all int types, needs template
 template <typename dataType>
-bool Row<dataType>::validNumeric(const std::string token) {
+Row<dataType>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
 
-    unsigned int i = 0;
+    size = colCount;
 
-    while (i < token.size() && (token[i] == ' ' || token[i] == '-' || token[i] == '+')) i++;
-
-    if (i >= token.size()) return false;    //returns false if input string is comprised entirely 
-                                            //of leading chars {' ','+','-'} which should default
-                                            //to zero (false->zero) where function returns
-
-    return isdigit(token[i]);
+    tokens = splitInt<dataType>(lineBuffer, colCount, delim);
 
 }
 
+//
 template <typename dataType>
 void Row<dataType>::print(void) {
 
