@@ -28,13 +28,6 @@ class Row {
         //returns entire contents of row as an array
         dataType * entries(void);
 
-        //returns the nth element in the row (or nth from last provided n < 0)
-        dataType entry(const int n);
-
-        //print n elements in row, note that myRow.print(-1) will print up to the second to last element
-        //note: why have colRange computaion here a second time? Function might be called externally via row.print(-1)
-        void print(const int n);
-
         //print all
         void print(void);
 
@@ -244,6 +237,9 @@ Row<std::string> * DataTable<dataType>::header(void) {
 template <typename dataType>
 void DataTable<dataType>::sort(const unsigned int n) {
 
+    std::cout << "sort function should operate on a sepcific col in each row, ";
+    std::cout << "or the result of a computation on * data" << std::endl;
+
     return;
 
 }
@@ -291,23 +287,6 @@ void Row<dataType>::print(void) {
 
 }
 
-template <typename dataType>
-void Row<dataType>::print(const int n) {
-
-    unsigned int i = 0, colRange = (n < 0) ? (size + n) : std::min((unsigned int)n, size);
-
-    while (i < (colRange - 1)) std::cout << tokens[i++] << ", ";    //fixed potentially unsafe routine
-
-    std::cout << tokens[i] << std::endl;
-
-}
-
-template <typename dataType>
-dataType Row<dataType>::entry(const int n) {
-
-    return tokens[n];
-
-}
 
 template <typename dataType>
 dataType * Row<dataType>::entries(void) {
