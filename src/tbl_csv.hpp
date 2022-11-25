@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
-#include <string>
+#include <sstream>  //supports token parsing with getline()
+#include <cstring>  //supports std::memcpy()
 #include <vector>
 
 #include "token_split.hpp"
@@ -19,14 +19,17 @@ class Row {
         //      of string data / int data / float data etc.
         dataType * tokens;
 
-        unsigned int size;
+        size_t size;
 
     public:
 
-        Row (const std::string lineBuffer, const unsigned int colCount, const char delim);
+        Row (const std::string lineBuffer, const size_t colCount, const char delim);
 
-        //returns entire contents of row as an array
+        //returns pointer to row contents
         dataType * entries(void);
+
+        //returns row element by index
+        dataType entry(size_t n);
 
         //print all
         void print(void);
@@ -40,13 +43,13 @@ class DataTable {
 
         char delimeter;
 
-        unsigned int numRows, numCols;
+        size_t numRows, numCols;
 
         Row<std::string> * headerLabels;
 
         std::vector<Row<dataType> *> rows;
 
-        void quickSortByColumnN(const unsigned int n);
+        void quickSortByColumnN(const size_t n);
 
     public:
         
@@ -70,23 +73,26 @@ class DataTable {
         void fptrReference(bool (*tokenRelation)(dataType, dataType));
 
         //sort in descending order by token values in index n
-        void sort(const unsigned int n);
+        void sort(const size_t n);
 
         //didn't want to #include <tuple> for this alone, might find use later
-        const unsigned int rowDim(void);
-        const unsigned int colDim(void);
+        const size_t rowDim(void);
+        const size_t colDim(void);
 
         //returns first row of parsed csv file, cast as std::string regardless of table dataType
         Row<std::string> * header(void);
 
         //returns pointer to row at index n
-        Row<dataType> * row(const unsigned int n);
+        Row<dataType> * row(const size_t n);
 
         //does same thing as index but removes row after returning pointer
-        Row<dataType> * pullRow(const unsigned int n);
+        Row<dataType> * pullRow(const size_t n);
 
         //returns table contents as 1D array for ease of use by other classes / programs etc.
-        dataType * exportStaticArray(void);
+        dataType * exportContiguousArray(void);
+
+        //returns table contents as 2D array: new dataType[rowSize][colSize]
+        dataType ** export2DArray(void);
 
 };
 
@@ -159,13 +165,13 @@ DataTable<dataType>::~DataTable(void) {
 }
 
 template <typename dataType>
-const unsigned int DataTable<dataType>::rowDim(void) { return numRows; }    //added to replace size() method which was redundant and weird
+const size_t DataTable<dataType>::rowDim(void) { return numRows; }    //added to replace size() method which was redundant and weird
 
 template <typename dataType>
-const unsigned int DataTable<dataType>::colDim(void) { return numCols; }    //ditto
+const size_t DataTable<dataType>::colDim(void) { return numCols; }    //ditto
 
 template <typename dataType>
-Row<dataType> * DataTable<dataType>::row(const unsigned int n) {     //renamed to row()
+Row<dataType> * DataTable<dataType>::row(const size_t n) {     //renamed to row()
 
     if (n < rows.size()) return rows.at(n);
 
@@ -174,19 +180,18 @@ Row<dataType> * DataTable<dataType>::row(const unsigned int n) {     //renamed t
 }
 
 template <typename dataType>
-dataType * DataTable<dataType>::exportStaticArray(void) {
+dataType * DataTable<dataType>::exportContiguousArray(void) {
 
     dataType * arr = new dataType [numCols * numRows];
 
-    unsigned int row, col;
+    size_t row, base = 0;
+
 
     for (row = 0; row < numRows; row++) {
 
-        for (col = 0; col < numCols; col++) {
+        std::memcpy(&arr[base], rows.at(row)->entries());
 
-            arr[(row * numCols) + col] = rows.at(row)->token(col);
-
-        }
+        base += numCols;
 
     }
 
@@ -195,7 +200,28 @@ dataType * DataTable<dataType>::exportStaticArray(void) {
 }
 
 template <typename dataType>
-Row<dataType> * DataTable<dataType>::pullRow(const unsigned int n) {
+dataType ** DataTable<dataType>::export2DArray(void) {
+
+    dataType ** arr = new dataType * [numRows];
+
+    const size_t rowSize = sizeof(dataType) * numCols;
+
+    size_t row, col;
+
+    for (row = 0; row < numRows; row++) {
+
+        arr[row] = new dataType[numCols];
+
+        std::memcpy(arr[row], rows.at(row)->entries(), rowSize);
+
+    }
+
+    return arr;
+
+}
+
+template <typename dataType>
+Row<dataType> * DataTable<dataType>::pullRow(const size_t n) {
 
     Row<dataType> * rowPtr = nullptr;
 
@@ -220,7 +246,7 @@ void DataTable<dataType>::fptrReference(bool (*func)(dataType, dataType)) {
 
     std::cout << "evoked function pointer in data table" << std::endl;
 
-    std::cout << func(rows.at(0)->token(0), rows.at(0)->token(1)) << std::endl;
+    std::cout << func(rows.at(0)->tokens(0), rows.at(0)->tokens(1)) << std::endl;
 
     return;
 
@@ -235,7 +261,7 @@ Row<std::string> * DataTable<dataType>::header(void) {
 
 //TODO: see above, consider adding overflows
 template <typename dataType>
-void DataTable<dataType>::sort(const unsigned int n) {
+void DataTable<dataType>::sort(const size_t n) {
 
     std::cout << "sort function should operate on a sepcific col in each row, ";
     std::cout << "or the result of a computation on * data" << std::endl;
@@ -248,7 +274,7 @@ void DataTable<dataType>::sort(const unsigned int n) {
 //note: check for double and string casts first, then assume integer variant
 
 template < > 
-Row<double>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
+Row<double>::Row(const std::string lineBuffer, const size_t colCount, const char delim) {
 
     size = colCount;
 
@@ -257,7 +283,7 @@ Row<double>::Row(const std::string lineBuffer, const unsigned int colCount, cons
 }
 
 template < >
-Row<std::string>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
+Row<std::string>::Row(const std::string lineBuffer, const size_t colCount, const char delim) {
 
     size = colCount;
 
@@ -267,7 +293,7 @@ Row<std::string>::Row(const std::string lineBuffer, const unsigned int colCount,
 
 //handles all int types, needs template
 template <typename dataType>
-Row<dataType>::Row(const std::string lineBuffer, const unsigned int colCount, const char delim) {
+Row<dataType>::Row(const std::string lineBuffer, const size_t colCount, const char delim) {
 
     size = colCount;
 
@@ -279,7 +305,7 @@ Row<dataType>::Row(const std::string lineBuffer, const unsigned int colCount, co
 template <typename dataType>
 void Row<dataType>::print(void) {
 
-    unsigned int i = 0;
+    size_t i = 0;
 
     while (i < (size - 1)) std::cout << tokens[i++] << ", ";    //fixed potentially unsafe routine
 
@@ -292,5 +318,14 @@ template <typename dataType>
 dataType * Row<dataType>::entries(void) {
 
     return tokens;
+
+}
+
+template <typename dataType>
+dataType Row<dataType>::entry(size_t n) {
+
+    if (n < size) return tokens[n];
+
+    return 0;
 
 }
