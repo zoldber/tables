@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
-#include <cstring>
+#include <sstream>  //supports token parsing with getline()
+#include <cstring>  //supports std::memcpy()
 #include <vector>
 
 #include "token_split.hpp"
